@@ -10,7 +10,7 @@ from . import http_api, cloud_api, iot
 from .const import CONFIG_DIR, DOMAIN, SERVERS
 
 
-REQUIREMENTS = ['warrant==0.2.0', 'AWSIoTPythonSDK==1.2.0']
+REQUIREMENTS = ['warrant==0.2.0']
 DEPENDENCIES = ['http']
 CONF_MODE = 'mode'
 CONF_COGNITO_CLIENT_ID = 'cognito_client_id'
@@ -45,7 +45,7 @@ def async_setup(hass, config):
         kwargs = {CONF_MODE: DEFAULT_MODE}
 
     cloud = hass.data[DOMAIN] = Cloud(hass, **kwargs)
-    yield from hass.async_add_job(cloud.initialize)
+    yield from cloud.initialize()
     yield from http_api.async_setup(hass)
     return True
 
@@ -101,22 +101,28 @@ class Cloud:
         """Get path to the stored auth."""
         return self.path('{}_auth.json'.format(self.mode))
 
+    @asyncio.coroutine
     def initialize(self):
         """Initialize and load cloud info."""
-        # Ensure config dir exists
-        path = self.hass.config.path(CONFIG_DIR)
-        if not os.path.isdir(path):
-            os.mkdir(path)
+        def load_config():
+            # Ensure config dir exists
+            path = self.hass.config.path(CONFIG_DIR)
+            if not os.path.isdir(path):
+                os.mkdir(path)
 
-        user_info = self.user_info_path
-        if os.path.isfile(user_info):
-            with open(user_info, 'rt') as file:
-                info = json.loads(file.read())
-            self.email = info['email']
-            self.thing_name = info['thing_name']
-            self.id_token = info['id_token']
-            self.refresh_token = info['refresh_token']
-            self.iot.connect()
+            user_info = self.user_info_path
+            if os.path.isfile(user_info):
+                with open(user_info, 'rt') as file:
+                    info = json.loads(file.read())
+                self.email = info['email']
+                self.thing_name = info['thing_name']
+                self.id_token = info['id_token']
+                self.refresh_token = info['refresh_token']
+
+        yield from self.hass.async_add_job(load_config)
+
+        if self.email is not None:
+            self.hass.async_add_job(self.iot.connect())
 
     def path(self, *parts):
         """Get config path inside cloud dir."""
