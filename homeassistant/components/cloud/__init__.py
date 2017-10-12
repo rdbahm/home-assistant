@@ -6,7 +6,7 @@ import os
 
 import voluptuous as vol
 
-from . import http_api, cloud_api, iot
+from . import http_api, iot
 from .const import CONFIG_DIR, DOMAIN, SERVERS
 
 
@@ -16,7 +16,6 @@ CONF_MODE = 'mode'
 CONF_COGNITO_CLIENT_ID = 'cognito_client_id'
 CONF_USER_POOL_ID = 'user_pool_id'
 CONF_REGION = 'region'
-CONF_API_BASE = 'api_base'
 MODE_DEV = 'development'
 DEFAULT_MODE = MODE_DEV
 _LOGGER = logging.getLogger(__name__)
@@ -29,7 +28,6 @@ CONFIG_SCHEMA = vol.Schema({
         vol.Required(CONF_COGNITO_CLIENT_ID): str,
         vol.Required(CONF_USER_POOL_ID): str,
         vol.Required(CONF_REGION): str,
-        vol.Required(CONF_API_BASE): str,
     }),
 }, extra=vol.ALLOW_EXTRA)
 
@@ -52,7 +50,7 @@ class Cloud:
     """Store the configuration of the cloud connection."""
 
     def __init__(self, hass, mode, cognito_client_id=None, user_pool_id=None,
-                 region=None, api_base=None, iot_endpoint=None):
+                 region=None, iot_endpoint=None):
         """Create an instance of Cloud."""
         self.hass = hass
         self.mode = mode
@@ -62,13 +60,11 @@ class Cloud:
         self.access_token = None
         self.refresh_token = None
         self.iot = iot.CloudIoT(self)
-        self.api = cloud_api.CloudApi(self)
 
         if mode == MODE_DEV:
             self.cognito_client_id = cognito_client_id
             self.user_pool_id = user_pool_id
             self.region = region
-            self.api_base = api_base
             self.iot_endpoint = iot_endpoint
 
         else:
@@ -77,7 +73,6 @@ class Cloud:
             self.cognito_client_id = info['cognito_client_id']
             self.user_pool_id = info['user_pool_id']
             self.region = info['region']
-            self.api_base = info['api_base']
             self.iot_endpoint = info['iot_endpoint']
 
     @property
