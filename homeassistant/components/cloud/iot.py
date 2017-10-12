@@ -54,8 +54,6 @@ class CloudIoT:
                     result = yield from async_handle_message(
                         hass, self.cloud, msg['handler'], msg['payload'])
 
-                    print("GOT RESPONSE", result)
-
                     response['payload'] = result
 
                 except Exception:
