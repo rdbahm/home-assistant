@@ -9,7 +9,5 @@ SERVERS = {
     #     'cognito_client_id': '',
     #     'user_pool_id': '',
     #     'region': '',
-    #     'api_base': '',
-    #     'iot_endpoint': ''
     # }
 }
