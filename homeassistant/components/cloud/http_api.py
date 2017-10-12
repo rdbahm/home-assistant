@@ -13,8 +13,6 @@ from . import auth_api
 from .const import DOMAIN, REQUEST_TIMEOUT
 
 _LOGGER = logging.getLogger(__name__)
-# Login makes multiple requests, give higher timeout
-LOGIN_TIMEOUT = 30
 
 
 @asyncio.coroutine
@@ -78,7 +76,7 @@ class CloudLoginView(HomeAssistantView):
         hass = request.app['hass']
         cloud = hass.data[DOMAIN]
 
-        with async_timeout.timeout(LOGIN_TIMEOUT, loop=hass.loop):
+        with async_timeout.timeout(REQUEST_TIMEOUT, loop=hass.loop):
             yield from hass.async_add_job(auth_api.login, cloud, data['email'],
                                           data['password'])
             yield from hass.async_add_job(cloud.iot.connect)
