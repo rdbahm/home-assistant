@@ -17,7 +17,6 @@ CONF_COGNITO_CLIENT_ID = 'cognito_client_id'
 CONF_USER_POOL_ID = 'user_pool_id'
 CONF_REGION = 'region'
 CONF_API_BASE = 'api_base'
-CONF_IOT_ENDPOINT = 'iot_endpoint'
 MODE_DEV = 'development'
 DEFAULT_MODE = MODE_DEV
 _LOGGER = logging.getLogger(__name__)
@@ -31,7 +30,6 @@ CONFIG_SCHEMA = vol.Schema({
         vol.Required(CONF_USER_POOL_ID): str,
         vol.Required(CONF_REGION): str,
         vol.Required(CONF_API_BASE): str,
-        vol.Required(CONF_IOT_ENDPOINT): str,
     }),
 }, extra=vol.ALLOW_EXTRA)
 
