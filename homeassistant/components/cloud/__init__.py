@@ -61,6 +61,7 @@ class Cloud:
         self.email = None
         self.thing_name = None
         self.id_token = None
+        self.access_token = None
         self.refresh_token = None
         self.iot = iot.CloudIoT(self)
         self.api = cloud_api.CloudApi(self)
@@ -87,16 +88,6 @@ class Cloud:
         return self.email is not None
 
     @property
-    def certificate_pem_path(self):
-        """Get path to certificate pem."""
-        return self.path('{}_iot_certificate.pem'.format(self.mode))
-
-    @property
-    def secret_key_path(self):
-        """Get path to public key."""
-        return self.path('{}_iot_secret.key'.format(self.mode))
-
-    @property
     def user_info_path(self):
         """Get path to the stored auth."""
         return self.path('{}_auth.json'.format(self.mode))
@@ -117,6 +108,7 @@ class Cloud:
                 self.email = info['email']
                 self.thing_name = info['thing_name']
                 self.id_token = info['id_token']
+                self.access_token = info['access_token']
                 self.refresh_token = info['refresh_token']
 
         yield from self.hass.async_add_job(load_config)
@@ -135,6 +127,7 @@ class Cloud:
         self.email = None
         self.thing_name = None
         self.id_token = None
+        self.access_token = None
         self.refresh_token = None
 
         for file in (self.certificate_pem_path, self.secret_key_path,
@@ -151,5 +144,6 @@ class Cloud:
                 'email': self.email,
                 'thing_name': self.thing_name,
                 'id_token': self.id_token,
+                'access_token': self.access_token,
                 'refresh_token': self.refresh_token,
             }, indent=4))

@@ -2,8 +2,6 @@
 import hashlib
 import logging
 
-from requests.exceptions import RequestException
-
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -113,20 +111,10 @@ def login(cloud, email, password):
     """Log user in and fetch certificate."""
     cognito = _authenticate(cloud, email, password)
     cloud.id_token = cognito.id_token
-
-    try:
-        cert = cloud.api.retrieve_iot_certificate()
-    except RequestException:
-        cloud.id_token = None
-        cognito.logout()
-        raise UnknownError('Unable to fetch certificate.')
-
-    cloud.id_token = cognito.id_token
+    cloud.access_token = cognito.access_token
     cloud.refresh_token = cognito.refresh_token
     cloud.email = email
-    cloud.thing_name = cert['thing_name']
     cloud.write_user_info()
-    _write_certificate(cloud, cert)
 
 
 def check_token(cloud):
@@ -135,13 +123,13 @@ def check_token(cloud):
 
     cognito = _cognito(
         cloud,
-        # We're not storing access token but id token will work too
-        access_token=cloud.id_token,
+        access_token=cloud.access_token,
         refresh_token=cloud.refresh_token)
 
     try:
         if cognito.check_token():
             cloud.id_token = cognito.id_token
+            cloud.access_token = cognito.access_token
             cloud.write_user_info()
     except ClientError as err:
         raise _map_aws_exception(err)
@@ -165,15 +153,6 @@ def _authenticate(cloud, email, password):
 
     except ClientError as err:
         raise _map_aws_exception(err)
-
-
-def _write_certificate(cloud, cert):
-    """Write certificate."""
-    with open(cloud.certificate_pem_path, 'wt') as file:
-        file.write(cert['certificate_pem'])
-
-    with open(cloud.secret_key_path, 'wt') as file:
-        file.write(cert['secret_key'])
 
 
 def _cognito(cloud, **kwargs):

@@ -1,18 +1,15 @@
 """Module to handle messages from Home Assistant cloud."""
 import asyncio
-import gzip
-import json
 import logging
-import os
 
-from homeassistant.util.decorator import Registry
-from homeassistant.components.alexa import smart_home
+from aiohttp import hdrs
 
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
+from homeassistant.components.alexa import smart_home
+from homeassistant.util.decorator import Registry
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from .const import (
-    PUBLISH_TOPIC_FORMAT, SUBSCRIBE_TOPIC_FORMAT,
-    IOT_KEEP_ALIVE, ALEXA_PUBLISH_TOPIC)
+from . import auth_api
+
 
 HANDLERS = Registry()
 _LOGGER = logging.getLogger(__name__)
@@ -31,10 +28,19 @@ class CloudIoT:
     @asyncio.coroutine
     def connect(self):
         """Connect to the IoT broker."""
-        assert not self.is_connected
+        if self.is_connected:
+            raise Exception('Cannot connect while already connected')
+
         hass = self.cloud.hass
+
+        yield from hass.async_add_job(auth_api.check_token, self.cloud)
+
         session = async_get_clientsession(self.cloud.hass)
-        self.client = client = yield from session.ws_connect('ws://localhost:8002/websocket')
+        headers = {
+            hdrs.AUTHORIZATION: 'Bearer {}'.format(self.cloud.access_token)
+        }
+        self.client = client = yield from session.ws_connect(
+            'ws://localhost:8002/websocket', headers=headers)
         self.is_connected = True
 
         try:
@@ -57,7 +63,6 @@ class CloudIoT:
                     response['error'] = True
 
                 _LOGGER.debug('Publishing message: %s', response)
-                # payload = bytearray(gzip.compress(payload.encode('utf-8')))
                 yield from client.send_json(response)
 
                 msg = yield from client.receive_json()
@@ -82,80 +87,10 @@ class CloudIoT:
         self._remove_hass_stop_listener = hass.bus.listen_once(
             EVENT_HOMEASSISTANT_STOP, _handle_hass_stop)
 
-        # from AWSIoTPythonSDK.exception.operationError import operationError
-        # from AWSIoTPythonSDK.exception.operationTimeoutException import \
-        #     operationTimeoutException
-
-        # assert self.client is None, 'Cloud already connected'
-
-        # client = _client_factory(self.cloud)
-        # hass = self.cloud.hass
-
-        # def message_callback(mqtt_client, userdata, msg):
-        #     """Handle IoT message."""
-        #     _, handler, message_id = msg.topic.rsplit('/', 2)
-        #     payload = gzip.decompress(msg.payload).decode('utf-8')
-        #     _LOGGER.debug('Received message on %s: %s', msg.topic, payload)
-
-        #     self.cloud.hass.add_job(
-        #         async_handle_message, hass, self.cloud, handler,
-        #         message_id, payload)
-
-        # try:
-        #     if not client.connect(keepAliveIntervalSecond=IOT_KEEP_ALIVE):
-        #         return
-
-        #     client.subscribe(
-        #         SUBSCRIBE_TOPIC_FORMAT.format(self.cloud.thing_name), 1,
-        #         message_callback)
-        #     self.client = client
-        # except (OSError, operationError, operationTimeoutException):
-        #     # SSL Error, connect error, timeout.
-        #     pass
-
-    # @asyncio.coroutine
-    # def publish(self, msgid, payload):
-    #     """Publish a message to the cloud."""
-    #     # topic = PUBLISH_TOPIC_FORMAT.format(self.cloud.thing_name, topic)
-    #     _LOGGER.debug('Publishing message to %s: %s', msgid, payload)
-    #     # payload = bytearray(gzip.compress(payload.encode('utf-8')))
-    #     yield from self.client.send_json({
-    #         'msgid': msgid,
-    #         'payload': payload,
-    #     })
-
     @asyncio.coroutine
     def disconnect(self):
         """Disconnect the client."""
         yield from self.client.close()
-
-        # self.client.disconnect()
-        # self._remove_hass_stop_listener()
-        # self.client = None
-        # self._remove_hass_stop_listener = None
-
-
-def _client_factory(cloud):
-    """Create IoT client."""
-    from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
-    root_ca = os.path.join(os.path.dirname(__file__), 'aws_iot_root_cert.pem')
-
-    client = AWSIoTMQTTClient(cloud.thing_name)
-    client.configureEndpoint(cloud.iot_endpoint, 8883)
-    client.configureCredentials(root_ca, cloud.secret_key_path,
-                                cloud.certificate_pem_path)
-
-    # Auto back-off reconnects up to 128 seconds. If connected over 20 seconds
-    # reset the auto back-off.
-    client.configureAutoReconnectBackoffTime(1, 128, 20)
-
-    # Wait 10 seconds for a CONNACK or a disconnect to complete.
-    client.configureConnectDisconnectTimeout(10)
-
-    # Set timeout to 5 seconds for publish, subscribe and unsubscribe.
-    client.configureMQTTOperationTimeout(5)
-
-    return client
 
 
 @asyncio.coroutine

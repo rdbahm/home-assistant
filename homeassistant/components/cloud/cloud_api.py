@@ -27,9 +27,3 @@ class CloudApi:
             headers={"Authorization": self.cloud.id_token})
 
         return response
-
-    def retrieve_iot_certificate(self):
-        """Retrieve the certificate to connect to IoT."""
-        resp = self.make_api_call('device/create')
-        resp.raise_for_status()
-        return resp.json()

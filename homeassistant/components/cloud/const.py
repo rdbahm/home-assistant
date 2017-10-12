@@ -2,11 +2,6 @@
 DOMAIN = 'cloud'
 CONFIG_DIR = '.cloud'
 REQUEST_TIMEOUT = 10
-IOT_KEEP_ALIVE = 300
-
-SUBSCRIBE_TOPIC_FORMAT = "{}/i/#"
-PUBLISH_TOPIC_FORMAT = "{}/c/{}"
-ALEXA_PUBLISH_TOPIC = "alexa/{}"
 
 SERVERS = {
     # Example entry:
