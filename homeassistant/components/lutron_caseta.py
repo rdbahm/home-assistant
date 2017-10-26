@@ -15,8 +15,8 @@ from homeassistant.const import CONF_HOST
 from homeassistant.helpers import discovery
 from homeassistant.helpers.entity import Entity
 
-REQUIREMENTS = ['https://github.com/rdbahm/pylutron-caseta/archive/v0.3.1.zip'
-                '#pylutron-caseta==0.3.1']
+REQUIREMENTS = ['https://github.com/rdbahm/pylutron-caseta/archive/v0.3.2.zip'
+                '#pylutron-caseta==0.3.2']
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -48,14 +48,10 @@ def setup(hass, base_config):
     _certfile = os.path.join(hass.config.config_dir, config['certfile'])
     _ca_certs = os.path.join(hass.config.config_dir, config['ca_certs'])
 
-    _LOGGER.info("Got keyfile %s", _keyfile)
-    _LOGGER.info("Got certfile %s", _certfile)
-    _LOGGER.info("Got ca_certs %s", _ca_certs)
+    hass.data[LUTRON_CASETA_SMARTBRIDGE] = Smartbridge.connect(hostname=config[CONF_HOST],
+        keyfile=_keyfile,certfile=_certfile,ca_certs=_ca_certs)
 
-    hass.data[LUTRON_CASETA_SMARTBRIDGE] = Smartbridge(
-        hostname=config[CONF_HOST], keyfile=_keyfile,
-        certfile=_certfile,ca_certs=_ca_certs
-    )
+
     if not hass.data[LUTRON_CASETA_SMARTBRIDGE].is_connected():
         _LOGGER.error("Unable to connect to Lutron smartbridge at %s",
                       config[CONF_HOST])
