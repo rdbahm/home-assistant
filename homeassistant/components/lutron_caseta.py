@@ -6,6 +6,7 @@ https://home-assistant.io/components/lutron_caseta/
 """
 import asyncio
 import logging
+import os
 
 import voluptuous as vol
 
@@ -14,7 +15,9 @@ from homeassistant.const import CONF_HOST
 from homeassistant.helpers import discovery
 from homeassistant.helpers.entity import Entity
 
-REQUIREMENTS = ['pylutron-caseta==0.2.8']
+REQUIREMENTS = ['https://github.com/rdbahm/pylutron-caseta/archive/v0.3.1.zip'
+                '#pylutron-caseta==0.3.1']
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,7 +27,10 @@ DOMAIN = 'lutron_caseta'
 
 CONFIG_SCHEMA = vol.Schema({
     DOMAIN: vol.Schema({
-        vol.Required(CONF_HOST): cv.string
+        vol.Required(CONF_HOST): cv.string,
+        vol.Required('keyfile'): cv.string,
+        vol.Required('certfile'): cv.string,
+        vol.Required('ca_certs'): cv.string
     })
 }, extra=vol.ALLOW_EXTRA)
 
@@ -38,8 +44,17 @@ def setup(hass, base_config):
     from pylutron_caseta.smartbridge import Smartbridge
 
     config = base_config.get(DOMAIN)
+    _keyfile = os.path.join(hass.config.config_dir, config['keyfile'])
+    _certfile = os.path.join(hass.config.config_dir, config['certfile'])
+    _ca_certs = os.path.join(hass.config.config_dir, config['ca_certs'])
+
+    _LOGGER.info("Got keyfile %s", _keyfile)
+    _LOGGER.info("Got certfile %s", _certfile)
+    _LOGGER.info("Got ca_certs %s", _ca_certs)
+
     hass.data[LUTRON_CASETA_SMARTBRIDGE] = Smartbridge(
-        hostname=config[CONF_HOST]
+        hostname=config[CONF_HOST], keyfile=_keyfile,
+        certfile=_certfile,ca_certs=_ca_certs
     )
     if not hass.data[LUTRON_CASETA_SMARTBRIDGE].is_connected():
         _LOGGER.error("Unable to connect to Lutron smartbridge at %s",
