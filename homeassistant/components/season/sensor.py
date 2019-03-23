@@ -14,7 +14,7 @@ from homeassistant.const import CONF_TYPE
 from homeassistant.helpers.entity import Entity
 from homeassistant import util
 
-REQUIREMENTS = ['ephem==3.7.6.0']
+REQUIREMENTS = ['skyfield==1.10']
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,16 +71,25 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
 def get_season(date, hemisphere, season_tracking_type):
     """Calculate the current season."""
-    import ephem
-
     if hemisphere == 'equator':
         return None
 
     if season_tracking_type == TYPE_ASTRONOMICAL:
-        spring_start = ephem.next_equinox(str(date.year)).datetime()
-        summer_start = ephem.next_solstice(str(date.year)).datetime()
-        autumn_start = ephem.next_equinox(spring_start).datetime()
-        winter_start = ephem.next_solstice(summer_start).datetime()
+        from skyfield.api import load
+        from skyfield import almanac
+
+        ts = load.timescale()
+        ephemeris = load('de421.bsp')
+        year_start = ts.utc(int(date.year), 1, 1)
+        year_end = ts.utc(int(date.year), 12, 31)
+
+        times, seasons = almanac.find_discrete(year_start, year_end,
+            almanac.seasons(ephemeris))
+
+        spring_start = times[0].utc_datetime().replace(tzinfo=None)
+        summer_start = times[1].utc_datetime().replace(tzinfo=None)
+        autumn_start = times[2].utc_datetime().replace(tzinfo=None)
+        winter_start = times[3].utc_datetime().replace(tzinfo=None)
     else:
         spring_start = datetime(2017, 3, 1).replace(year=date.year)
         summer_start = spring_start.replace(month=6)
@@ -130,5 +139,5 @@ class Season(Entity):
 
     def update(self):
         """Update season."""
-        self.datetime = datetime.now()
+        self.datetime = datetime.utcnow()
         self.season = get_season(self.datetime, self.hemisphere, self.type)

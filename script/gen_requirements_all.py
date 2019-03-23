@@ -53,7 +53,7 @@ TEST_REQUIREMENTS = (
     'eebrightbox',
     'emulated_roku',
     'enturclient',
-    'ephem',
+    'skyfield',
     'evohomeclient',
     'feedparser-homeassistant',
     'foobot_async',
